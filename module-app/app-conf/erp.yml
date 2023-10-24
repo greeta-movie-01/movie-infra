@@ -1,12 +1,9 @@
 spring:
   application:
-    name: movie
+    name: erp
   output:
     ansi:
       enabled: ALWAYS
-  data:
-    mongodb:
-      uri: mongodb://movie-mongodb:27017/moviesdb
   keycloak:
     server-url: https://keycloak.greeta.net
   security:
@@ -25,7 +22,7 @@ logging:
     org.springframework.security: DEBUG
 
 info:
-  system: Movie Service
+  system: ERP Service
 
 server:
   forward-headers-strategy: framework

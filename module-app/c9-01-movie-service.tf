@@ -1,36 +1,22 @@
-resource "kubernetes_config_map_v1" "department" {
+resource "kubernetes_config_map_v1" "movie" {
   metadata {
-    name      = "department"
+    name      = "movie"
     labels = {
-      app = "department"
+      app = "movie"
     }
   }
 
   data = {
-    "application.yml" = file("${path.module}/app-conf/department.yml")
+    "application.yml" = file("${path.module}/app-conf/movie.yml")
   }
 }
 
-resource "kubernetes_secret_v1" "department" {
+resource "kubernetes_deployment_v1" "movie_deployment" {
+  depends_on = [kubernetes_deployment_v1.movie_mongodb_deployment]
   metadata {
-    name = "department"
-  }
-
-  data = {
-    "spring.data.mongodb.password" = "UGlvdF8xMjM="
-    "spring.data.mongodb.username" = "cGlvdHI="
-  }
-
-  type = "Opaque"
-}
-
-
-resource "kubernetes_deployment_v1" "department_deployment" {
-  depends_on = [kubernetes_deployment_v1.mongodb]
-  metadata {
-    name = "department"
+    name = "movie"
     labels = {
-      app = "department"
+      app = "movie"
     }
   }
  
@@ -38,13 +24,13 @@ resource "kubernetes_deployment_v1" "department_deployment" {
     replicas = 1
     selector {
       match_labels = {
-        app = "department"
+        app = "movie"
       }
     }
     template {
       metadata {
         labels = {
-          app = "department"
+          app = "movie"
         }
         annotations = {
           "prometheus.io/scrape" = "true"
@@ -53,16 +39,19 @@ resource "kubernetes_deployment_v1" "department_deployment" {
         }        
       }
       spec {
-        service_account_name = "spring-cloud-kubernetes"        
+        service_account_name = "spring-cloud-kubernetes"      
         
         container {
-          image = "ghcr.io/greeta-erp/department-service:0a80c56595c01eae1aa0d569f9279124f32c320c"
-          name  = "department"
+          image = "ghcr.io/greeta-movie-01/movie-service:0a80c56595c01eae1aa0d569f9279124f32c320c"
+          name  = "movie"
           image_pull_policy = "Always"
           port {
             container_port = 8080
           }
-
+          env {
+            name = "SPRING_DATA_MONGODB_URI"
+            value = "mongodb://movie-mongodb:27017/moviesdb"
+          }            
           env {
             name  = "SPRING_CLOUD_BOOTSTRAP_ENABLED"
             value = "true"
@@ -80,7 +69,7 @@ resource "kubernetes_deployment_v1" "department_deployment" {
 
           env {
             name  = "OTEL_SERVICE_NAME"
-            value = "department"
+            value = "movie"
           }
 
           env {
@@ -128,17 +117,17 @@ resource "kubernetes_deployment_v1" "department_deployment" {
           #   }
           #   initial_delay_seconds = 20
           #   period_seconds        = 15
-          # }        
-
+          # }  
+         
         }
       }
     }
   }
 }
 
-resource "kubernetes_horizontal_pod_autoscaler_v1" "department_hpa" {
+resource "kubernetes_horizontal_pod_autoscaler_v1" "movie_hpa" {
   metadata {
-    name = "department-hpa"
+    name = "movie-hpa"
   }
   spec {
     max_replicas = 2
@@ -146,23 +135,23 @@ resource "kubernetes_horizontal_pod_autoscaler_v1" "department_hpa" {
     scale_target_ref {
       api_version = "apps/v1"
       kind = "Deployment"
-      name = kubernetes_deployment_v1.department_deployment.metadata[0].name 
+      name = kubernetes_deployment_v1.movie_deployment.metadata[0].name 
     }
     target_cpu_utilization_percentage = 70
   }
 }
 
-resource "kubernetes_service_v1" "department_service" {
+resource "kubernetes_service_v1" "movie_service" {
   metadata {
-    name      = "department"
+    name = "movie"
     labels = {
-      app        = "department"
+      app = "movie"
       spring-boot = "true"
     }
   }
   spec {
     selector = {
-      app = "department"
+      app = "movie"
     }
     port {
       port = 8080

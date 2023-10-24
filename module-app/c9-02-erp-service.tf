@@ -1,35 +1,22 @@
-resource "kubernetes_config_map_v1" "gateway" {
+resource "kubernetes_config_map_v1" "erp" {
   metadata {
-    name      = "gateway"
+    name      = "erp"
     labels = {
-      app = "gateway"
+      app = "erp"
     }
   }
 
   data = {
-    "gateway.yml" = file("${path.module}/app-conf/gateway.yml")
+    "application.yml" = file("${path.module}/app-conf/erp.yml")
   }
 }
 
-resource "kubernetes_secret_v1" "gateway" {
+resource "kubernetes_deployment_v1" "erp_deployment" {
+  depends_on = [kubernetes_deployment_v1.movie_mongodb_deployment]
   metadata {
-    name = "gateway"
-  }
-
-  data = {
-    "spring.redis.host"     = "gateway-redis"
-    "spring.redis.port"     = "6379"
-    "spring.redis.username" = "default"
-  }
-}
-
-
-resource "kubernetes_deployment_v1" "gateway_deployment" {
-  depends_on = [kubernetes_deployment_v1.mongodb, kubernetes_deployment_v1.gateway_redis_deployment]
-  metadata {
-    name = "gateway"
+    name = "erp"
     labels = {
-      app = "gateway"
+      app = "erp"
     }
   }
  
@@ -37,13 +24,13 @@ resource "kubernetes_deployment_v1" "gateway_deployment" {
     replicas = 1
     selector {
       match_labels = {
-        app = "gateway"
+        app = "erp"
       }
     }
     template {
       metadata {
         labels = {
-          app = "gateway"
+          app = "erp"
         }
         annotations = {
           "prometheus.io/scrape" = "true"
@@ -52,34 +39,24 @@ resource "kubernetes_deployment_v1" "gateway_deployment" {
         }        
       }
       spec {
-        service_account_name = "spring-cloud-kubernetes"
-
-        volume {
-          name = "gateway-config-volume"    
-          config_map {
-            name = "gateway"
-          }
-        }
-
-        volume {
-          name = "gateway-secret-volume"
-          secret {
-            secret_name = "gateway"
-          }
-        }               
+        service_account_name = "spring-cloud-kubernetes"      
         
         container {
-          image = "ghcr.io/greeta-erp/gateway-service:0a80c56595c01eae1aa0d569f9279124f32c320c"
-          name  = "gateway"
+          image = "ghcr.io/greeta-movie-01/erp-service:b6802d3ed66b2235b53ed03fb6a6738d5c4f92e8"
+          name  = "erp"
           image_pull_policy = "Always"
           port {
             container_port = 8080
+          }          
+          env {
+            name  = "SPRING_CLOUD_BOOTSTRAP_ENABLED"
+            value = "true"
           }
 
           env {
-            name  = "SPRING_CONFIG_LOCATION"
-            value = "classpath:application.yml,file:/config-repo/gateway.yml"
-          } 
+            name  = "SPRING_CLOUD_KUBERNETES_SECRETS_ENABLEAPI"
+            value = "true"
+          }
 
           env {
             name  = "JAVA_TOOL_OPTIONS"
@@ -88,7 +65,7 @@ resource "kubernetes_deployment_v1" "gateway_deployment" {
 
           env {
             name  = "OTEL_SERVICE_NAME"
-            value = "gateway"
+            value = "erp"
           }
 
           env {
@@ -99,7 +76,7 @@ resource "kubernetes_deployment_v1" "gateway_deployment" {
           env {
             name  = "OTEL_METRICS_EXPORTER"
             value = "none"
-          }       
+          }
 
           # resources {
           #   requests = {
@@ -136,28 +113,17 @@ resource "kubernetes_deployment_v1" "gateway_deployment" {
           #   }
           #   initial_delay_seconds = 20
           #   period_seconds        = 15
-          # }                           
-
-          volume_mount {
-            name       = "gateway-config-volume"
-            mount_path = "/config-repo"
-          }
-
-          volume_mount {
-            name      = "gateway-secret-volume"
-            mount_path = "/workspace/secrets/redis"
-          }             
- 
+          # }  
+         
         }
-
       }
     }
   }
 }
 
-resource "kubernetes_horizontal_pod_autoscaler_v1" "gateway_hpa" {
+resource "kubernetes_horizontal_pod_autoscaler_v1" "erp_hpa" {
   metadata {
-    name = "gateway-hpa"
+    name = "erp-hpa"
   }
   spec {
     max_replicas = 2
@@ -165,19 +131,24 @@ resource "kubernetes_horizontal_pod_autoscaler_v1" "gateway_hpa" {
     scale_target_ref {
       api_version = "apps/v1"
       kind = "Deployment"
-      name = kubernetes_deployment_v1.gateway_deployment.metadata[0].name 
+      name = kubernetes_deployment_v1.erp_deployment.metadata[0].name 
     }
     target_cpu_utilization_percentage = 70
   }
 }
 
-resource "kubernetes_service_v1" "gateway_service" {
+resource "kubernetes_service_v1" "erp_service" {
+  depends_on = [kubernetes_deployment_v1.erp_deployment]
   metadata {
-    name = "gateway"
+    name = "erp"
+    labels = {
+      app = "erp"
+      spring-boot = "true"
+    }
   }
   spec {
     selector = {
-      app = "gateway"
+      app = "erp"
     }
     port {
       port = 8080

@@ -22,7 +22,7 @@ resource "kubernetes_deployment_v1" "movie_ui_deployment" {
       }
       spec {
         container {
-          image = "ghcr.io/greeta-erp/erp-ui"
+          image = "ghcr.io/greeta-movie-01/movie-ui"
           name  = "movie-ui"
           image_pull_policy = "Always"
           port {

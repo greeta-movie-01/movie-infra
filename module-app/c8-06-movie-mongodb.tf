@@ -1,13 +1,13 @@
 # Resource: Keycloak Postgres Kubernetes Deployment
-resource "kubernetes_deployment_v1" "movies_mongodb_deployment" {
+resource "kubernetes_deployment_v1" "movie_mongodb_deployment" {
   metadata {
-    name = "movies-mongodb"
+    name = "movie-mongodb"
   }
   spec {
     replicas = 1
     selector {
       match_labels = {
-        app = "movies-mongodb"
+        app = "movie-mongodb"
       }          
     }
     strategy {
@@ -16,12 +16,12 @@ resource "kubernetes_deployment_v1" "movies_mongodb_deployment" {
     template {
       metadata {
         labels = {
-          app = "movies-mongodb"
+          app = "movie-mongodb"
         }
       }
       spec {       
         container {
-          name = "movies-mongodb"
+          name = "movie-mongodb"
           image = "mongo:6.0.4"
           port {
             container_port = 27017
@@ -35,9 +35,9 @@ resource "kubernetes_deployment_v1" "movies_mongodb_deployment" {
 }
 
 # Resource: Movies MongoDB Horizontal Pod Autoscaler
-resource "kubernetes_horizontal_pod_autoscaler_v1" "movies_mongodb_hpa" {
+resource "kubernetes_horizontal_pod_autoscaler_v1" "mongodb_hpa" {
   metadata {
-    name = "movies-mongodb-hpa"
+    name = "movie-mongodb-hpa"
   }
   spec {
     max_replicas = 2
@@ -45,20 +45,20 @@ resource "kubernetes_horizontal_pod_autoscaler_v1" "movies_mongodb_hpa" {
     scale_target_ref {
       api_version = "apps/v1"
       kind = "Deployment"
-      name = kubernetes_deployment_v1.movies_mongodb_deployment.metadata[0].name
+      name = kubernetes_deployment_v1.mongodb_deployment.metadata[0].name
     }
     target_cpu_utilization_percentage = 60
   }
 }
 
 # Resource: Movies MongoDB Cluster IP Service
-resource "kubernetes_service_v1" "movies_mongodb_service" {
+resource "kubernetes_service_v1" "mongodb_service" {
   metadata {
-    name = "movies-mongodb"
+    name = "movie-mongodb"
   }
   spec {
     selector = {
-      app = kubernetes_deployment_v1.movies_mongodb_deployment.spec.0.selector.0.match_labels.app 
+      app = kubernetes_deployment_v1.mongodb_deployment.spec.0.selector.0.match_labels.app 
     }
     port {
       port        = 27017 # Service Port
