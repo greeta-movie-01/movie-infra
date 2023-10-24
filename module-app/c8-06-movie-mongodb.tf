@@ -45,7 +45,7 @@ resource "kubernetes_horizontal_pod_autoscaler_v1" "mongodb_hpa" {
     scale_target_ref {
       api_version = "apps/v1"
       kind = "Deployment"
-      name = kubernetes_deployment_v1.mongodb_deployment.metadata[0].name
+      name = kubernetes_deployment_v1.movie_mongodb_deployment.metadata[0].name
     }
     target_cpu_utilization_percentage = 60
   }
@@ -58,7 +58,7 @@ resource "kubernetes_service_v1" "mongodb_service" {
   }
   spec {
     selector = {
-      app = kubernetes_deployment_v1.mongodb_deployment.spec.0.selector.0.match_labels.app 
+      app = kubernetes_deployment_v1.movie_mongodb_deployment.spec.0.selector.0.match_labels.app 
     }
     port {
       port        = 27017 # Service Port
