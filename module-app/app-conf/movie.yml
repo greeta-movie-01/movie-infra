@@ -12,6 +12,17 @@ spring:
           issuer-uri: https://keycloak.greeta.net/realms/erp-realm
           jwk-set-uri: ${spring.keycloak.server-url}/realms/erp-realm/protocol/openid-connect/certs
 
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}]"
+    console: "%d{yyyy-MM-dd HH:mm:ss} ${LOG_LEVEL_PATTERN:-%5p} %m%n"
+  level:
+    org.springframework.cloud.kubernetes: TRACE
+    org.springframework.security: DEBUG
+
+info:
+  system: Movie Service
+
 server:
   forward-headers-strategy: framework
 
